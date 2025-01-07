@@ -1,0 +1,2276 @@
+if ("undefined" == typeof jQuery) {
+  throw new Error("Bootstrap's JavaScript requires jQuery");
+}
++function($) {
+  var b = $.fn.jquery.split(" ")[0].split(".");
+  if (b[0] < 2 && b[1] < 9 || (1 == b[0] && (9 == b[1] && b[2] < 1) || b[0] > 3)) {
+    throw new Error("Bootstrap's JavaScript requires jQuery version 1.9.1 or higher, but lower than version 4");
+  }
+}(jQuery), +function($) {
+  /**
+   * @return {?}
+   */
+  function transitionEnd() {
+    /** @type {Element} */
+    var el = document.createElement("bootstrap");
+    var transEndEventNames = {
+      WebkitTransition : "webkitTransitionEnd",
+      MozTransition : "transitionend",
+      OTransition : "oTransitionEnd otransitionend",
+      transition : "transitionend"
+    };
+    var name;
+    for (name in transEndEventNames) {
+      if (void 0 !== el.style[name]) {
+        return{
+          end : transEndEventNames[name]
+        };
+      }
+    }
+    return false;
+  }
+  /**
+   * @param {number} duration
+   * @return {?}
+   */
+  $.fn.emulateTransitionEnd = function(duration) {
+    /** @type {boolean} */
+    var c = false;
+    var $el = this;
+    $(this).one("bsTransitionEnd", function() {
+      /** @type {boolean} */
+      c = true;
+    });
+    /**
+     * @return {undefined}
+     */
+    var callback = function() {
+      if (!c) {
+        $($el).trigger($.support.transition.end);
+      }
+    };
+    return setTimeout(callback, duration), this;
+  };
+  $(function() {
+    $.support.transition = transitionEnd();
+    if ($.support.transition) {
+      $.event.special.bsTransitionEnd = {
+        bindType : $.support.transition.end,
+        delegateType : $.support.transition.end,
+        /**
+         * @param {Event} event
+         * @return {?}
+         */
+        handle : function(event) {
+          if ($(event.target).is(this)) {
+            return event.handleObj.handler.apply(this, arguments);
+          }
+        }
+      };
+    }
+  });
+}(jQuery), +function($) {
+  /**
+   * @param {?} type
+   * @return {?}
+   */
+  function setValue(type) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.alert");
+      if (!data) {
+        $this.data("bs.alert", data = new Alert(this));
+      }
+      if ("string" == typeof type) {
+        data[type].call($this);
+      }
+    });
+  }
+  /** @type {string} */
+  var f3 = '[data-dismiss="alert"]';
+  /**
+   * @param {?} el
+   * @return {undefined}
+   */
+  var Alert = function(el) {
+    $(el).on("click", f3, this.close);
+  };
+  /** @type {string} */
+  Alert.VERSION = "3.3.7";
+  /** @type {number} */
+  Alert.TRANSITION_DURATION = 150;
+  /**
+   * @param {Object} e
+   * @return {undefined}
+   */
+  Alert.prototype.close = function(e) {
+    /**
+     * @return {undefined}
+     */
+    function removeElement() {
+      $parent.detach().trigger("closed.bs.alert").remove();
+    }
+    var $this = $(this);
+    var value = $this.attr("data-target");
+    if (!value) {
+      value = $this.attr("href");
+      value = value && value.replace(/.*(?=#[^\s]*$)/, "");
+    }
+    var $parent = $("#" === value ? [] : value);
+    if (e) {
+      e.preventDefault();
+    }
+    if (!$parent.length) {
+      $parent = $this.closest(".alert");
+    }
+    $parent.trigger(e = $.Event("close.bs.alert"));
+    if (!e.isDefaultPrevented()) {
+      $parent.removeClass("in");
+      if ($.support.transition && $parent.hasClass("fade")) {
+        $parent.one("bsTransitionEnd", removeElement).emulateTransitionEnd(Alert.TRANSITION_DURATION);
+      } else {
+        removeElement();
+      }
+    }
+  };
+  var old = $.fn.alert;
+  /** @type {function (?): ?} */
+  $.fn.alert = setValue;
+  /** @type {function (?): undefined} */
+  $.fn.alert.Constructor = Alert;
+  /**
+   * @return {?}
+   */
+  $.fn.alert.noConflict = function() {
+    return $.fn.alert = old, this;
+  };
+  $(document).on("click.bs.alert.data-api", f3, Alert.prototype.close);
+}(jQuery), +function($) {
+  /**
+   * @param {string} option
+   * @return {?}
+   */
+  function init(option) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.button");
+      var options = "object" == typeof option && option;
+      if (!data) {
+        $this.data("bs.button", data = new Button(this, options));
+      }
+      if ("toggle" == option) {
+        data.toggle();
+      } else {
+        if (option) {
+          data.setState(option);
+        }
+      }
+    });
+  }
+  /**
+   * @param {?} element
+   * @param {?} options
+   * @return {undefined}
+   */
+  var Button = function(element, options) {
+    this.$element = $(element);
+    this.options = $.extend({}, Button.DEFAULTS, options);
+    /** @type {boolean} */
+    this.isLoading = false;
+  };
+  /** @type {string} */
+  Button.VERSION = "3.3.7";
+  Button.DEFAULTS = {
+    loadingText : "loading..."
+  };
+  /**
+   * @param {string} state
+   * @return {undefined}
+   */
+  Button.prototype.setState = function(state) {
+    /** @type {string} */
+    var elem = "disabled";
+    var $el = this.$element;
+    /** @type {string} */
+    var val = $el.is("input") ? "val" : "html";
+    var data = $el.data();
+    state += "Text";
+    if (null == data.resetText) {
+      $el.data("resetText", $el[val]());
+    }
+    setTimeout($.proxy(function() {
+      $el[val](null == data[state] ? this.options[state] : data[state]);
+      if ("loadingText" == state) {
+        /** @type {boolean} */
+        this.isLoading = true;
+        $el.addClass(elem).attr(elem, elem).prop(elem, true);
+      } else {
+        if (this.isLoading) {
+          /** @type {boolean} */
+          this.isLoading = false;
+          $el.removeClass(elem).removeAttr(elem).prop(elem, false);
+        }
+      }
+    }, this), 0);
+  };
+  /**
+   * @return {undefined}
+   */
+  Button.prototype.toggle = function() {
+    /** @type {boolean} */
+    var a = true;
+    var $shcell = this.$element.closest('[data-toggle="buttons"]');
+    if ($shcell.length) {
+      var $input = this.$element.find("input");
+      if ("radio" == $input.prop("type")) {
+        if ($input.prop("checked")) {
+          /** @type {boolean} */
+          a = false;
+        }
+        $shcell.find(".active").removeClass("active");
+        this.$element.addClass("active");
+      } else {
+        if ("checkbox" == $input.prop("type")) {
+          if ($input.prop("checked") !== this.$element.hasClass("active")) {
+            /** @type {boolean} */
+            a = false;
+          }
+          this.$element.toggleClass("active");
+        }
+      }
+      $input.prop("checked", this.$element.hasClass("active"));
+      if (a) {
+        $input.trigger("change");
+      }
+    } else {
+      this.$element.attr("aria-pressed", !this.$element.hasClass("active"));
+      this.$element.toggleClass("active");
+    }
+  };
+  var old = $.fn.button;
+  /** @type {function (string): ?} */
+  $.fn.button = init;
+  /** @type {function (?, ?): undefined} */
+  $.fn.button.Constructor = Button;
+  /**
+   * @return {?}
+   */
+  $.fn.button.noConflict = function() {
+    return $.fn.button = old, this;
+  };
+  $(document).on("click.bs.button.data-api", '[data-toggle^="button"]', function(evt) {
+    var self = $(evt.target).closest(".btn");
+    init.call(self, "toggle");
+    if (!$(evt.target).is('input[type="radio"], input[type="checkbox"]')) {
+      evt.preventDefault();
+      if (self.is("input,button")) {
+        self.trigger("focus");
+      } else {
+        self.find("input:visible,button:visible").first().trigger("focus");
+      }
+    }
+  }).on("focus.bs.button.data-api blur.bs.button.data-api", '[data-toggle^="button"]', function(e) {
+    $(e.target).closest(".btn").toggleClass("focus", /^focus(in)?$/.test(e.type));
+  });
+}(jQuery), +function($) {
+  /**
+   * @param {number} option
+   * @return {?}
+   */
+  function init(option) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.carousel");
+      var options = $.extend({}, Carousel.DEFAULTS, $this.data(), "object" == typeof option && option);
+      var action = "string" == typeof option ? option : options.slide;
+      if (!data) {
+        $this.data("bs.carousel", data = new Carousel(this, options));
+      }
+      if ("number" == typeof option) {
+        data.to(option);
+      } else {
+        if (action) {
+          data[action]();
+        } else {
+          if (options.interval) {
+            data.pause().cycle();
+          }
+        }
+      }
+    });
+  }
+  /**
+   * @param {?} element
+   * @param {Object} options
+   * @return {undefined}
+   */
+  var Carousel = function(element, options) {
+    this.$element = $(element);
+    this.$indicators = this.$element.find(".carousel-indicators");
+    /** @type {Object} */
+    this.options = options;
+    /** @type {null} */
+    this.paused = null;
+    /** @type {null} */
+    this.sliding = null;
+    /** @type {null} */
+    this.interval = null;
+    /** @type {null} */
+    this.$active = null;
+    /** @type {null} */
+    this.$items = null;
+    if (this.options.keyboard) {
+      this.$element.on("keydown.bs.carousel", $.proxy(this.keydown, this));
+    }
+    if ("hover" == this.options.pause) {
+      if (!("ontouchstart" in document.documentElement)) {
+        this.$element.on("mouseenter.bs.carousel", $.proxy(this.pause, this)).on("mouseleave.bs.carousel", $.proxy(this.cycle, this));
+      }
+    }
+  };
+  /** @type {string} */
+  Carousel.VERSION = "3.3.7";
+  /** @type {number} */
+  Carousel.TRANSITION_DURATION = 600;
+  Carousel.DEFAULTS = {
+    interval : 5E3,
+    pause : "hover",
+    wrap : true,
+    keyboard : true
+  };
+  /**
+   * @param {Event} e
+   * @return {undefined}
+   */
+  Carousel.prototype.keydown = function(e) {
+    if (!/input|textarea/i.test(e.target.tagName)) {
+      switch(e.which) {
+        case 37:
+          this.prev();
+          break;
+        case 39:
+          this.next();
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+    }
+  };
+  /**
+   * @param {boolean} dataAndEvents
+   * @return {?}
+   */
+  Carousel.prototype.cycle = function(dataAndEvents) {
+    return dataAndEvents || (this.paused = false), this.interval && clearInterval(this.interval), this.options.interval && (!this.paused && (this.interval = setInterval($.proxy(this.next, this), this.options.interval))), this;
+  };
+  /**
+   * @param {?} item
+   * @return {?}
+   */
+  Carousel.prototype.getItemIndex = function(item) {
+    return this.$items = item.parent().children(".item"), this.$items.index(item || this.$active);
+  };
+  /**
+   * @param {string} b
+   * @param {?} relativeToItem
+   * @return {?}
+   */
+  Carousel.prototype.getItemForDirection = function(b, relativeToItem) {
+    var index = this.getItemIndex(relativeToItem);
+    /** @type {boolean} */
+    var d = "prev" == b && 0 === index || "next" == b && index == this.$items.length - 1;
+    if (d && !this.options.wrap) {
+      return relativeToItem;
+    }
+    /** @type {number} */
+    var count = "prev" == b ? -1 : 1;
+    /** @type {number} */
+    var ix = (index + count) % this.$items.length;
+    return this.$items.eq(ix);
+  };
+  /**
+   * @param {number} pos
+   * @return {?}
+   */
+  Carousel.prototype.to = function(pos) {
+    var that = this;
+    var activePos = this.getItemIndex(this.$active = this.$element.find(".item.active"));
+    if (!(pos > this.$items.length - 1 || pos < 0)) {
+      return this.sliding ? this.$element.one("slid.bs.carousel", function() {
+        that.to(pos);
+      }) : activePos == pos ? this.pause().cycle() : this.slide(pos > activePos ? "next" : "prev", this.$items.eq(pos));
+    }
+  };
+  /**
+   * @param {boolean} $vid
+   * @return {?}
+   */
+  Carousel.prototype.pause = function($vid) {
+    return $vid || (this.paused = true), this.$element.find(".next, .prev").length && ($.support.transition && (this.$element.trigger($.support.transition.end), this.cycle(true))), this.interval = clearInterval(this.interval), this;
+  };
+  /**
+   * @return {?}
+   */
+  Carousel.prototype.next = function() {
+    if (!this.sliding) {
+      return this.slide("next");
+    }
+  };
+  /**
+   * @return {?}
+   */
+  Carousel.prototype.prev = function() {
+    if (!this.sliding) {
+      return this.slide("prev");
+    }
+  };
+  /**
+   * @param {string} b
+   * @param {string} ui
+   * @return {?}
+   */
+  Carousel.prototype.slide = function(b, ui) {
+    var $active = this.$element.find(".item.active");
+    var node = ui || this.getItemForDirection(b, $active);
+    var isCycling = this.interval;
+    /** @type {string} */
+    var direction = "next" == b ? "left" : "right";
+    var that = this;
+    if (node.hasClass("active")) {
+      return this.sliding = false;
+    }
+    var previous = node[0];
+    var e = $.Event("slide.bs.carousel", {
+      relatedTarget : previous,
+      direction : direction
+    });
+    if (this.$element.trigger(e), !e.isDefaultPrevented()) {
+      if (this.sliding = true, isCycling && this.pause(), this.$indicators.length) {
+        this.$indicators.find(".active").removeClass("active");
+        var $listing = $(this.$indicators.children()[this.getItemIndex(node)]);
+        if ($listing) {
+          $listing.addClass("active");
+        }
+      }
+      var startEvent = $.Event("slid.bs.carousel", {
+        relatedTarget : previous,
+        direction : direction
+      });
+      return $.support.transition && this.$element.hasClass("slide") ? (node.addClass(b), node[0].offsetWidth, $active.addClass(direction), node.addClass(direction), $active.one("bsTransitionEnd", function() {
+        node.removeClass([b, direction].join(" ")).addClass("active");
+        $active.removeClass(["active", direction].join(" "));
+        /** @type {boolean} */
+        that.sliding = false;
+        setTimeout(function() {
+          that.$element.trigger(startEvent);
+        }, 0);
+      }).emulateTransitionEnd(Carousel.TRANSITION_DURATION)) : ($active.removeClass("active"), node.addClass("active"), this.sliding = false, this.$element.trigger(startEvent)), isCycling && this.cycle(), this;
+    }
+  };
+  var old = $.fn.carousel;
+  /** @type {function (number): ?} */
+  $.fn.carousel = init;
+  /** @type {function (?, Object): undefined} */
+  $.fn.carousel.Constructor = Carousel;
+  /**
+   * @return {?}
+   */
+  $.fn.carousel.noConflict = function() {
+    return $.fn.carousel = old, this;
+  };
+  /**
+   * @param {?} event
+   * @return {undefined}
+   */
+  var start = function(event) {
+    var href;
+    var $this = $(this);
+    var panel = $($this.attr("data-target") || (href = $this.attr("href")) && href.replace(/.*(?=#[^\s]+$)/, ""));
+    if (panel.hasClass("carousel")) {
+      var next = $.extend({}, panel.data(), $this.data());
+      var slideIndex = $this.attr("data-slide-to");
+      if (slideIndex) {
+        /** @type {boolean} */
+        next.interval = false;
+      }
+      init.call(panel, next);
+      if (slideIndex) {
+        panel.data("bs.carousel").to(slideIndex);
+      }
+      event.preventDefault();
+    }
+  };
+  $(document).on("click.bs.carousel.data-api", "[data-slide]", start).on("click.bs.carousel.data-api", "[data-slide-to]", start);
+  $(window).on("load", function() {
+    $('[data-ride="carousel"]').each(function() {
+      var self = $(this);
+      init.call(self, self.data());
+    });
+  });
+}(jQuery), +function($) {
+  /**
+   * @param {HTMLElement} $this
+   * @return {?}
+   */
+  function getParent($this) {
+    var href;
+    var statsTemplate = $this.attr("data-target") || (href = $this.attr("href")) && href.replace(/.*(?=#[^\s]+$)/, "");
+    return $(statsTemplate);
+  }
+  /**
+   * @param {boolean} options
+   * @return {?}
+   */
+  function build(options) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.collapse");
+      var settings = $.extend({}, Collapse.DEFAULTS, $this.data(), "object" == typeof options && options);
+      if (!data) {
+        if (settings.toggle) {
+          if (/show|hide/.test(options)) {
+            /** @type {boolean} */
+            settings.toggle = false;
+          }
+        }
+      }
+      if (!data) {
+        $this.data("bs.collapse", data = new Collapse(this, settings));
+      }
+      if ("string" == typeof options) {
+        data[options]();
+      }
+    });
+  }
+  /**
+   * @param {Element} element
+   * @param {?} options
+   * @return {undefined}
+   */
+  var Collapse = function(element, options) {
+    this.$element = $(element);
+    this.options = $.extend({}, Collapse.DEFAULTS, options);
+    this.$trigger = $('[data-toggle="collapse"][href="#' + element.id + '"],[data-toggle="collapse"][data-target="#' + element.id + '"]');
+    /** @type {null} */
+    this.transitioning = null;
+    if (this.options.parent) {
+      this.$parent = this.getParent();
+    } else {
+      this.addAriaAndCollapsedClass(this.$element, this.$trigger);
+    }
+    if (this.options.toggle) {
+      this.toggle();
+    }
+  };
+  /** @type {string} */
+  Collapse.VERSION = "3.3.7";
+  /** @type {number} */
+  Collapse.TRANSITION_DURATION = 350;
+  Collapse.DEFAULTS = {
+    toggle : true
+  };
+  /**
+   * @return {?}
+   */
+  Collapse.prototype.dimension = function() {
+    var hasWidth = this.$element.hasClass("width");
+    return hasWidth ? "width" : "height";
+  };
+  /**
+   * @return {?}
+   */
+  Collapse.prototype.show = function() {
+    if (!this.transitioning && !this.$element.hasClass("in")) {
+      var hasData;
+      var self = this.$parent && this.$parent.children(".panel").children(".in, .collapsing");
+      if (!(self && (self.length && (hasData = self.data("bs.collapse"), hasData && hasData.transitioning)))) {
+        var e = $.Event("show.bs.collapse");
+        if (this.$element.trigger(e), !e.isDefaultPrevented()) {
+          if (self) {
+            if (self.length) {
+              build.call(self, "hide");
+              if (!hasData) {
+                self.data("bs.collapse", null);
+              }
+            }
+          }
+          var dimension = this.dimension();
+          this.$element.removeClass("collapse").addClass("collapsing")[dimension](0).attr("aria-expanded", true);
+          this.$trigger.removeClass("collapsed").attr("aria-expanded", true);
+          /** @type {number} */
+          this.transitioning = 1;
+          /**
+           * @return {undefined}
+           */
+          var complete = function() {
+            this.$element.removeClass("collapsing").addClass("collapse in")[dimension]("");
+            /** @type {number} */
+            this.transitioning = 0;
+            this.$element.trigger("shown.bs.collapse");
+          };
+          if (!$.support.transition) {
+            return complete.call(this);
+          }
+          var scrollSize = $.camelCase(["scroll", dimension].join("-"));
+          this.$element.one("bsTransitionEnd", $.proxy(complete, this)).emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize]);
+        }
+      }
+    }
+  };
+  /**
+   * @return {?}
+   */
+  Collapse.prototype.hide = function() {
+    if (!this.transitioning && this.$element.hasClass("in")) {
+      var e = $.Event("hide.bs.collapse");
+      if (this.$element.trigger(e), !e.isDefaultPrevented()) {
+        var dimension = this.dimension();
+        this.$element[dimension](this.$element[dimension]())[0].offsetHeight;
+        this.$element.addClass("collapsing").removeClass("collapse in").attr("aria-expanded", false);
+        this.$trigger.addClass("collapsed").attr("aria-expanded", false);
+        /** @type {number} */
+        this.transitioning = 1;
+        /**
+         * @return {undefined}
+         */
+        var complete = function() {
+          /** @type {number} */
+          this.transitioning = 0;
+          this.$element.removeClass("collapsing").addClass("collapse").trigger("hidden.bs.collapse");
+        };
+        return $.support.transition ? void this.$element[dimension](0).one("bsTransitionEnd", $.proxy(complete, this)).emulateTransitionEnd(Collapse.TRANSITION_DURATION) : complete.call(this);
+      }
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Collapse.prototype.toggle = function() {
+    this[this.$element.hasClass("in") ? "hide" : "show"]();
+  };
+  /**
+   * @return {?}
+   */
+  Collapse.prototype.getParent = function() {
+    return $(this.options.parent).find('[data-toggle="collapse"][data-parent="' + this.options.parent + '"]').each($.proxy(function(dataAndEvents, thisObject) {
+      var $this = $(thisObject);
+      this.addAriaAndCollapsedClass(getParent($this), $this);
+    }, this)).end();
+  };
+  /**
+   * @param {HTMLElement} element
+   * @param {?} el
+   * @return {undefined}
+   */
+  Collapse.prototype.addAriaAndCollapsedClass = function(element, el) {
+    var show = element.hasClass("in");
+    element.attr("aria-expanded", show);
+    el.toggleClass("collapsed", !show).attr("aria-expanded", show);
+  };
+  var old = $.fn.collapse;
+  /** @type {function (boolean): ?} */
+  $.fn.collapse = build;
+  /** @type {function (Element, ?): undefined} */
+  $.fn.collapse.Constructor = Collapse;
+  /**
+   * @return {?}
+   */
+  $.fn.collapse.noConflict = function() {
+    return $.fn.collapse = old, this;
+  };
+  $(document).on("click.bs.collapse.data-api", '[data-toggle="collapse"]', function(types) {
+    var $this = $(this);
+    if (!$this.attr("data-target")) {
+      types.preventDefault();
+    }
+    var value = getParent($this);
+    var data = value.data("bs.collapse");
+    var option = data ? "toggle" : $this.data();
+    build.call(value, option);
+  });
+}(jQuery), +function($) {
+  /**
+   * @param {Element} $this
+   * @return {?}
+   */
+  function getParent($this) {
+    var selector = $this.attr("data-target");
+    if (!selector) {
+      selector = $this.attr("href");
+      selector = selector && (/#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, ""));
+    }
+    var $parent = selector && $(selector);
+    return $parent && $parent.length ? $parent : $this.parent();
+  }
+  /**
+   * @param {Object} e
+   * @return {undefined}
+   */
+  function init(e) {
+    if (!(e && 3 === e.which)) {
+      $(backdrop).remove();
+      $(selector).each(function() {
+        var $this = $(this);
+        var $parent = getParent($this);
+        var relatedTarget = {
+          relatedTarget : this
+        };
+        if ($parent.hasClass("open")) {
+          if (!(e && ("click" == e.type && (/input|textarea/i.test(e.target.tagName) && $.contains($parent[0], e.target))))) {
+            $parent.trigger(e = $.Event("hide.bs.dropdown", relatedTarget));
+            if (!e.isDefaultPrevented()) {
+              $this.attr("aria-expanded", "false");
+              $parent.removeClass("open").trigger($.Event("hidden.bs.dropdown", relatedTarget));
+            }
+          }
+        }
+      });
+    }
+  }
+  /**
+   * @param {?} type
+   * @return {?}
+   */
+  function setValue(type) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.dropdown");
+      if (!data) {
+        $this.data("bs.dropdown", data = new Dropdown(this));
+      }
+      if ("string" == typeof type) {
+        data[type].call($this);
+      }
+    });
+  }
+  /** @type {string} */
+  var backdrop = ".dropdown-backdrop";
+  /** @type {string} */
+  var selector = '[data-toggle="dropdown"]';
+  /**
+   * @param {?} element
+   * @return {undefined}
+   */
+  var Dropdown = function(element) {
+    $(element).on("click.bs.dropdown", this.toggle);
+  };
+  /** @type {string} */
+  Dropdown.VERSION = "3.3.7";
+  /**
+   * @param {Object} e
+   * @return {?}
+   */
+  Dropdown.prototype.toggle = function(e) {
+    var $this = $(this);
+    if (!$this.is(".disabled, :disabled")) {
+      var $parent = getParent($this);
+      var isActive = $parent.hasClass("open");
+      if (init(), !isActive) {
+        if ("ontouchstart" in document.documentElement) {
+          if (!$parent.closest(".navbar-nav").length) {
+            $(document.createElement("div")).addClass("dropdown-backdrop").insertAfter($(this)).on("click", init);
+          }
+        }
+        var relatedTarget = {
+          relatedTarget : this
+        };
+        if ($parent.trigger(e = $.Event("show.bs.dropdown", relatedTarget)), e.isDefaultPrevented()) {
+          return;
+        }
+        $this.trigger("focus").attr("aria-expanded", "true");
+        $parent.toggleClass("open").trigger($.Event("shown.bs.dropdown", relatedTarget));
+      }
+      return false;
+    }
+  };
+  /**
+   * @param {Event} e
+   * @return {?}
+   */
+  Dropdown.prototype.keydown = function(e) {
+    if (/(38|40|27|32)/.test(e.which) && !/input|textarea/i.test(e.target.tagName)) {
+      var $this = $(this);
+      if (e.preventDefault(), e.stopPropagation(), !$this.is(".disabled, :disabled")) {
+        var $parent = getParent($this);
+        var isActive = $parent.hasClass("open");
+        if (!isActive && 27 != e.which || isActive && 27 == e.which) {
+          return 27 == e.which && $parent.find(selector).trigger("focus"), $this.trigger("click");
+        }
+        /** @type {string} */
+        var desc = " li:not(.disabled):visible a";
+        var elements = $parent.find(".dropdown-menu" + desc);
+        if (elements.length) {
+          var index = elements.index(e.target);
+          if (38 == e.which) {
+            if (index > 0) {
+              index--;
+            }
+          }
+          if (40 == e.which) {
+            if (index < elements.length - 1) {
+              index++;
+            }
+          }
+          if (!~index) {
+            /** @type {number} */
+            index = 0;
+          }
+          elements.eq(index).trigger("focus");
+        }
+      }
+    }
+  };
+  var old = $.fn.dropdown;
+  /** @type {function (?): ?} */
+  $.fn.dropdown = setValue;
+  /** @type {function (?): undefined} */
+  $.fn.dropdown.Constructor = Dropdown;
+  /**
+   * @return {?}
+   */
+  $.fn.dropdown.noConflict = function() {
+    return $.fn.dropdown = old, this;
+  };
+  $(document).on("click.bs.dropdown.data-api", init).on("click.bs.dropdown.data-api", ".dropdown form", function(event) {
+    event.stopPropagation();
+  }).on("click.bs.dropdown.data-api", selector, Dropdown.prototype.toggle).on("keydown.bs.dropdown.data-api", selector, Dropdown.prototype.keydown).on("keydown.bs.dropdown.data-api", ".dropdown-menu", Dropdown.prototype.keydown);
+}(jQuery), +function($) {
+  /**
+   * @param {boolean} options
+   * @param {Object} value
+   * @return {?}
+   */
+  function init(options, value) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.modal");
+      var about = $.extend({}, Modal.DEFAULTS, $this.data(), "object" == typeof options && options);
+      if (!data) {
+        $this.data("bs.modal", data = new Modal(this, about));
+      }
+      if ("string" == typeof options) {
+        data[options](value);
+      } else {
+        if (about.show) {
+          data.show(value);
+        }
+      }
+    });
+  }
+  /**
+   * @param {?} element
+   * @param {Object} options
+   * @return {undefined}
+   */
+  var Modal = function(element, options) {
+    /** @type {Object} */
+    this.options = options;
+    this.$body = $(document.body);
+    this.$element = $(element);
+    this.$dialog = this.$element.find(".modal-dialog");
+    /** @type {null} */
+    this.$backdrop = null;
+    /** @type {null} */
+    this.isShown = null;
+    /** @type {null} */
+    this.originalBodyPad = null;
+    /** @type {number} */
+    this.scrollbarWidth = 0;
+    /** @type {boolean} */
+    this.ignoreBackdropClick = false;
+    if (this.options.remote) {
+      this.$element.find(".modal-content").load(this.options.remote, $.proxy(function() {
+        this.$element.trigger("loaded.bs.modal");
+      }, this));
+    }
+  };
+  /** @type {string} */
+  Modal.VERSION = "3.3.7";
+  /** @type {number} */
+  Modal.TRANSITION_DURATION = 300;
+  /** @type {number} */
+  Modal.BACKDROP_TRANSITION_DURATION = 150;
+  Modal.DEFAULTS = {
+    backdrop : true,
+    keyboard : true,
+    show : true
+  };
+  /**
+   * @param {Object} elm
+   * @return {?}
+   */
+  Modal.prototype.toggle = function(elm) {
+    return this.isShown ? this.hide() : this.show(elm);
+  };
+  /**
+   * @param {Object} target
+   * @return {undefined}
+   */
+  Modal.prototype.show = function(target) {
+    var that = this;
+    var e = $.Event("show.bs.modal", {
+      relatedTarget : target
+    });
+    this.$element.trigger(e);
+    if (!this.isShown) {
+      if (!e.isDefaultPrevented()) {
+        /** @type {boolean} */
+        this.isShown = true;
+        this.checkScrollbar();
+        this.setScrollbar();
+        this.$body.addClass("modal-open");
+        this.escape();
+        this.resize();
+        this.$element.on("click.dismiss.bs.modal", '[data-dismiss="modal"]', $.proxy(this.hide, this));
+        this.$dialog.on("mousedown.dismiss.bs.modal", function() {
+          that.$element.one("mouseup.dismiss.bs.modal", function(ev) {
+            if ($(ev.target).is(that.$element)) {
+              /** @type {boolean} */
+              that.ignoreBackdropClick = true;
+            }
+          });
+        });
+        this.backdrop(function() {
+          var e = $.support.transition && that.$element.hasClass("fade");
+          if (!that.$element.parent().length) {
+            that.$element.appendTo(that.$body);
+          }
+          that.$element.show().scrollTop(0);
+          that.adjustDialog();
+          if (e) {
+            that.$element[0].offsetWidth;
+          }
+          that.$element.addClass("in");
+          that.enforceFocus();
+          var details = $.Event("shown.bs.modal", {
+            relatedTarget : target
+          });
+          if (e) {
+            that.$dialog.one("bsTransitionEnd", function() {
+              that.$element.trigger("focus").trigger(details);
+            }).emulateTransitionEnd(Modal.TRANSITION_DURATION);
+          } else {
+            that.$element.trigger("focus").trigger(details);
+          }
+        });
+      }
+    }
+  };
+  /**
+   * @param {Object} e
+   * @return {undefined}
+   */
+  Modal.prototype.hide = function(e) {
+    if (e) {
+      e.preventDefault();
+    }
+    e = $.Event("hide.bs.modal");
+    this.$element.trigger(e);
+    if (this.isShown) {
+      if (!e.isDefaultPrevented()) {
+        /** @type {boolean} */
+        this.isShown = false;
+        this.escape();
+        this.resize();
+        $(document).off("focusin.bs.modal");
+        this.$element.removeClass("in").off("click.dismiss.bs.modal").off("mouseup.dismiss.bs.modal");
+        this.$dialog.off("mousedown.dismiss.bs.modal");
+        if ($.support.transition && this.$element.hasClass("fade")) {
+          this.$element.one("bsTransitionEnd", $.proxy(this.hideModal, this)).emulateTransitionEnd(Modal.TRANSITION_DURATION);
+        } else {
+          this.hideModal();
+        }
+      }
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.enforceFocus = function() {
+    $(document).off("focusin.bs.modal").on("focusin.bs.modal", $.proxy(function(e) {
+      if (!(document === e.target)) {
+        if (!(this.$element[0] === e.target)) {
+          if (!this.$element.has(e.target).length) {
+            this.$element.trigger("focus");
+          }
+        }
+      }
+    }, this));
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.escape = function() {
+    if (this.isShown && this.options.keyboard) {
+      this.$element.on("keydown.dismiss.bs.modal", $.proxy(function(event) {
+        if (27 == event.which) {
+          this.hide();
+        }
+      }, this));
+    } else {
+      if (!this.isShown) {
+        this.$element.off("keydown.dismiss.bs.modal");
+      }
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.resize = function() {
+    if (this.isShown) {
+      $(window).on("resize.bs.modal", $.proxy(this.handleUpdate, this));
+    } else {
+      $(window).off("resize.bs.modal");
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.hideModal = function() {
+    var data = this;
+    this.$element.hide();
+    this.backdrop(function() {
+      data.$body.removeClass("modal-open");
+      data.resetAdjustments();
+      data.resetScrollbar();
+      data.$element.trigger("hidden.bs.modal");
+    });
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.removeBackdrop = function() {
+    if (this.$backdrop) {
+      this.$backdrop.remove();
+    }
+    /** @type {null} */
+    this.$backdrop = null;
+  };
+  /**
+   * @param {Function} callback
+   * @return {undefined}
+   */
+  Modal.prototype.backdrop = function(callback) {
+    var that = this;
+    /** @type {string} */
+    var animate = this.$element.hasClass("fade") ? "fade" : "";
+    if (this.isShown && this.options.backdrop) {
+      var doAnimate = $.support.transition && animate;
+      if (this.$backdrop = $(document.createElement("div")).addClass("modal-backdrop " + animate).appendTo(this.$body), this.$element.on("click.dismiss.bs.modal", $.proxy(function(e) {
+        return this.ignoreBackdropClick ? void(this.ignoreBackdropClick = false) : void(e.target === e.currentTarget && ("static" == this.options.backdrop ? this.$element[0].focus() : this.hide()));
+      }, this)), doAnimate && this.$backdrop[0].offsetWidth, this.$backdrop.addClass("in"), !callback) {
+        return;
+      }
+      if (doAnimate) {
+        this.$backdrop.one("bsTransitionEnd", callback).emulateTransitionEnd(Modal.BACKDROP_TRANSITION_DURATION);
+      } else {
+        callback();
+      }
+    } else {
+      if (!this.isShown && this.$backdrop) {
+        this.$backdrop.removeClass("in");
+        /**
+         * @return {undefined}
+         */
+        var removeElement = function() {
+          that.removeBackdrop();
+          if (callback) {
+            callback();
+          }
+        };
+        if ($.support.transition && this.$element.hasClass("fade")) {
+          this.$backdrop.one("bsTransitionEnd", removeElement).emulateTransitionEnd(Modal.BACKDROP_TRANSITION_DURATION);
+        } else {
+          removeElement();
+        }
+      } else {
+        if (callback) {
+          callback();
+        }
+      }
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.handleUpdate = function() {
+    this.adjustDialog();
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.adjustDialog = function() {
+    /** @type {boolean} */
+    var needsFlash = this.$element[0].scrollHeight > document.documentElement.clientHeight;
+    this.$element.css({
+      paddingLeft : !this.bodyIsOverflowing && needsFlash ? this.scrollbarWidth : "",
+      paddingRight : this.bodyIsOverflowing && !needsFlash ? this.scrollbarWidth : ""
+    });
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.resetAdjustments = function() {
+    this.$element.css({
+      paddingLeft : "",
+      paddingRight : ""
+    });
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.checkScrollbar = function() {
+    /** @type {number} */
+    var windowInnerWidth = window.innerWidth;
+    if (!windowInnerWidth) {
+      /** @type {(ClientRect|null)} */
+      var d = document.documentElement.getBoundingClientRect();
+      /** @type {number} */
+      windowInnerWidth = d.right - Math.abs(d.left);
+    }
+    /** @type {boolean} */
+    this.bodyIsOverflowing = document.body.clientWidth < windowInnerWidth;
+    this.scrollbarWidth = this.measureScrollbar();
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.setScrollbar = function() {
+    /** @type {number} */
+    var top = parseInt(this.$body.css("padding-right") || 0, 10);
+    /** @type {(number|string)} */
+    this.originalBodyPad = document.body.style.paddingRight || "";
+    if (this.bodyIsOverflowing) {
+      this.$body.css("padding-right", top + this.scrollbarWidth);
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Modal.prototype.resetScrollbar = function() {
+    this.$body.css("padding-right", this.originalBodyPad);
+  };
+  /**
+   * @return {?}
+   */
+  Modal.prototype.measureScrollbar = function() {
+    /** @type {Element} */
+    var n = document.createElement("div");
+    /** @type {string} */
+    n.className = "modal-scrollbar-measure";
+    this.$body.append(n);
+    /** @type {number} */
+    var e = n.offsetWidth - n.clientWidth;
+    return this.$body[0].removeChild(n), e;
+  };
+  var old = $.fn.modal;
+  /** @type {function (boolean, Object): ?} */
+  $.fn.modal = init;
+  /** @type {function (?, Object): undefined} */
+  $.fn.modal.Constructor = Modal;
+  /**
+   * @return {?}
+   */
+  $.fn.modal.noConflict = function() {
+    return $.fn.modal = old, this;
+  };
+  $(document).on("click.bs.modal.data-api", '[data-toggle="modal"]', function(types) {
+    var $this = $(this);
+    var href = $this.attr("href");
+    var self = $($this.attr("data-target") || href && href.replace(/.*(?=#[^\s]+$)/, ""));
+    var entityType = self.data("bs.modal") ? "toggle" : $.extend({
+      remote : !/#/.test(href) && href
+    }, self.data(), $this.data());
+    if ($this.is("a")) {
+      types.preventDefault();
+    }
+    self.one("show.bs.modal", function(event) {
+      if (!event.isDefaultPrevented()) {
+        self.one("hidden.bs.modal", function() {
+          if ($this.is(":visible")) {
+            $this.trigger("focus");
+          }
+        });
+      }
+    });
+    init.call(self, entityType, this);
+  });
+}(jQuery), +function($) {
+  /**
+   * @param {number} arg
+   * @return {?}
+   */
+  function initialize(arg) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.tooltip");
+      var options = "object" == typeof arg && arg;
+      if (!(!data && /destroy|hide/.test(arg))) {
+        if (!data) {
+          $this.data("bs.tooltip", data = new Tooltip(this, options));
+        }
+        if ("string" == typeof arg) {
+          data[arg]();
+        }
+      }
+    });
+  }
+  /**
+   * @param {?} element
+   * @param {boolean} options
+   * @return {undefined}
+   */
+  var Tooltip = function(element, options) {
+    /** @type {null} */
+    this.type = null;
+    /** @type {null} */
+    this.options = null;
+    /** @type {null} */
+    this.enabled = null;
+    /** @type {null} */
+    this.timeout = null;
+    /** @type {null} */
+    this.hoverState = null;
+    /** @type {null} */
+    this.$element = null;
+    /** @type {null} */
+    this.inState = null;
+    this.init("tooltip", element, options);
+  };
+  /** @type {string} */
+  Tooltip.VERSION = "3.3.7";
+  /** @type {number} */
+  Tooltip.TRANSITION_DURATION = 150;
+  Tooltip.DEFAULTS = {
+    animation : true,
+    placement : "top",
+    selector : false,
+    template : '<div class="tooltip" role="tooltip"><div class="tooltip-arrow"></div><div class="tooltip-inner"></div></div>',
+    trigger : "hover focus",
+    title : "",
+    delay : 0,
+    html : false,
+    container : false,
+    viewport : {
+      selector : "body",
+      padding : 0
+    }
+  };
+  /**
+   * @param {string} type
+   * @param {?} element
+   * @param {boolean} options
+   * @return {undefined}
+   */
+  Tooltip.prototype.init = function(type, element, options) {
+    if (this.enabled = true, this.type = type, this.$element = $(element), this.options = this.getOptions(options), this.$viewport = this.options.viewport && $($.isFunction(this.options.viewport) ? this.options.viewport.call(this, this.$element) : this.options.viewport.selector || this.options.viewport), this.inState = {
+      click : false,
+      hover : false,
+      focus : false
+    }, this.$element[0] instanceof document.constructor && !this.options.selector) {
+      throw new Error("`selector` option must be specified when initializing " + this.type + " on the window.document object!");
+    }
+    var params = this.options.trigger.split(" ");
+    var l = params.length;
+    for (;l--;) {
+      var param = params[l];
+      if ("click" == param) {
+        this.$element.on("click." + this.type, this.options.selector, $.proxy(this.toggle, this));
+      } else {
+        if ("manual" != param) {
+          /** @type {string} */
+          var eventIn = "hover" == param ? "mouseenter" : "focusin";
+          /** @type {string} */
+          var eventOut = "hover" == param ? "mouseleave" : "focusout";
+          this.$element.on(eventIn + "." + this.type, this.options.selector, $.proxy(this.enter, this));
+          this.$element.on(eventOut + "." + this.type, this.options.selector, $.proxy(this.leave, this));
+        }
+      }
+    }
+    if (this.options.selector) {
+      this._options = $.extend({}, this.options, {
+        trigger : "manual",
+        selector : ""
+      });
+    } else {
+      this.fixTitle();
+    }
+  };
+  /**
+   * @return {?}
+   */
+  Tooltip.prototype.getDefaults = function() {
+    return Tooltip.DEFAULTS;
+  };
+  /**
+   * @param {boolean} options
+   * @return {?}
+   */
+  Tooltip.prototype.getOptions = function(options) {
+    return options = $.extend({}, this.getDefaults(), this.$element.data(), options), options.delay && ("number" == typeof options.delay && (options.delay = {
+      show : options.delay,
+      hide : options.delay
+    })), options;
+  };
+  /**
+   * @return {?}
+   */
+  Tooltip.prototype.getDelegateOptions = function() {
+    var flags = {};
+    var defaults = this.getDefaults();
+    return this._options && $.each(this._options, function(key, value) {
+      if (defaults[key] != value) {
+        flags[key] = value;
+      }
+    }), flags;
+  };
+  /**
+   * @param {Object} obj
+   * @return {?}
+   */
+  Tooltip.prototype.enter = function(obj) {
+    var self = obj instanceof this.constructor ? obj : $(obj.currentTarget).data("bs." + this.type);
+    return self || (self = new this.constructor(obj.currentTarget, this.getDelegateOptions()), $(obj.currentTarget).data("bs." + this.type, self)), obj instanceof $.Event && (self.inState["focusin" == obj.type ? "focus" : "hover"] = true), self.tip().hasClass("in") || "in" == self.hoverState ? void(self.hoverState = "in") : (clearTimeout(self.timeout), self.hoverState = "in", self.options.delay && self.options.delay.show ? void(self.timeout = setTimeout(function() {
+      if ("in" == self.hoverState) {
+        self.show();
+      }
+    }, self.options.delay.show)) : self.show());
+  };
+  /**
+   * @return {?}
+   */
+  Tooltip.prototype.isInStateTrue = function() {
+    var unlock;
+    for (unlock in this.inState) {
+      if (this.inState[unlock]) {
+        return true;
+      }
+    }
+    return false;
+  };
+  /**
+   * @param {Object} obj
+   * @return {?}
+   */
+  Tooltip.prototype.leave = function(obj) {
+    var self = obj instanceof this.constructor ? obj : $(obj.currentTarget).data("bs." + this.type);
+    if (self || (self = new this.constructor(obj.currentTarget, this.getDelegateOptions()), $(obj.currentTarget).data("bs." + this.type, self)), obj instanceof $.Event && (self.inState["focusout" == obj.type ? "focus" : "hover"] = false), !self.isInStateTrue()) {
+      return clearTimeout(self.timeout), self.hoverState = "out", self.options.delay && self.options.delay.hide ? void(self.timeout = setTimeout(function() {
+        if ("out" == self.hoverState) {
+          self.hide();
+        }
+      }, self.options.delay.hide)) : self.hide();
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Tooltip.prototype.show = function() {
+    var e = $.Event("show.bs." + this.type);
+    if (this.hasContent() && this.enabled) {
+      this.$element.trigger(e);
+      var d = $.contains(this.$element[0].ownerDocument.documentElement, this.$element[0]);
+      if (e.isDefaultPrevented() || !d) {
+        return;
+      }
+      var self = this;
+      var $tip = this.tip();
+      var removeElement = this.getUID(this.type);
+      this.setContent();
+      $tip.attr("id", removeElement);
+      this.$element.attr("aria-describedby", removeElement);
+      if (this.options.animation) {
+        $tip.addClass("fade");
+      }
+      var placement = "function" == typeof this.options.placement ? this.options.placement.call(this, $tip[0], this.$element[0]) : this.options.placement;
+      /** @type {RegExp} */
+      var autoToken = /\s?auto?\s?/i;
+      /** @type {boolean} */
+      var autoPlace = autoToken.test(placement);
+      if (autoPlace) {
+        placement = placement.replace(autoToken, "") || "top";
+      }
+      $tip.detach().css({
+        top : 0,
+        left : 0,
+        display : "block"
+      }).addClass(placement).data("bs." + this.type, this);
+      if (this.options.container) {
+        $tip.appendTo(this.options.container);
+      } else {
+        $tip.insertAfter(this.$element);
+      }
+      this.$element.trigger("inserted.bs." + this.type);
+      var pos = this.getPosition();
+      var actualWidth = $tip[0].offsetWidth;
+      var actualHeight = $tip[0].offsetHeight;
+      if (autoPlace) {
+        var orgPlacement = placement;
+        var p = this.getPosition(this.$viewport);
+        placement = "bottom" == placement && pos.bottom + actualHeight > p.bottom ? "top" : "top" == placement && pos.top - actualHeight < p.top ? "bottom" : "right" == placement && pos.right + actualWidth > p.width ? "left" : "left" == placement && pos.left - actualWidth < p.left ? "right" : placement;
+        $tip.removeClass(orgPlacement).addClass(placement);
+      }
+      var calculatedOffset = this.getCalculatedOffset(placement, pos, actualWidth, actualHeight);
+      this.applyPlacement(calculatedOffset, placement);
+      /**
+       * @return {undefined}
+       */
+      var complete = function() {
+        var text = self.hoverState;
+        self.$element.trigger("shown.bs." + self.type);
+        /** @type {null} */
+        self.hoverState = null;
+        if ("out" == text) {
+          self.leave(self);
+        }
+      };
+      if ($.support.transition && this.$tip.hasClass("fade")) {
+        $tip.one("bsTransitionEnd", complete).emulateTransitionEnd(Tooltip.TRANSITION_DURATION);
+      } else {
+        complete();
+      }
+    }
+  };
+  /**
+   * @param {?} offset
+   * @param {string} placement
+   * @return {undefined}
+   */
+  Tooltip.prototype.applyPlacement = function(offset, placement) {
+    var $tip = this.tip();
+    var w = $tip[0].offsetWidth;
+    var height = $tip[0].offsetHeight;
+    /** @type {number} */
+    var top = parseInt($tip.css("margin-top"), 10);
+    /** @type {number} */
+    var left = parseInt($tip.css("margin-left"), 10);
+    if (isNaN(top)) {
+      /** @type {number} */
+      top = 0;
+    }
+    if (isNaN(left)) {
+      /** @type {number} */
+      left = 0;
+    }
+    offset.top += top;
+    offset.left += left;
+    $.offset.setOffset($tip[0], $.extend({
+      /**
+       * @param {?} props
+       * @return {undefined}
+       */
+      using : function(props) {
+        $tip.css({
+          top : Math.round(props.top),
+          left : Math.round(props.left)
+        });
+      }
+    }, offset), 0);
+    $tip.addClass("in");
+    var x = $tip[0].offsetWidth;
+    var actualHeight = $tip[0].offsetHeight;
+    if ("top" == placement) {
+      if (actualHeight != height) {
+        /** @type {number} */
+        offset.top = offset.top + height - actualHeight;
+      }
+    }
+    var pos = this.getViewportAdjustedDelta(placement, offset, x, actualHeight);
+    if (pos.left) {
+      offset.left += pos.left;
+    } else {
+      offset.top += pos.top;
+    }
+    /** @type {boolean} */
+    var isHorizontal = /top|bottom/.test(placement);
+    var _position = isHorizontal ? 2 * pos.left - w + x : 2 * pos.top - height + actualHeight;
+    /** @type {string} */
+    var sizingDomProperty = isHorizontal ? "offsetWidth" : "offsetHeight";
+    $tip.offset(offset);
+    this.replaceArrow(_position, $tip[0][sizingDomProperty], isHorizontal);
+  };
+  /**
+   * @param {number} position
+   * @param {number} dimension
+   * @param {boolean} horizontal
+   * @return {undefined}
+   */
+  Tooltip.prototype.replaceArrow = function(position, dimension, horizontal) {
+    this.arrow().css(horizontal ? "left" : "top", 50 * (1 - position / dimension) + "%").css(horizontal ? "top" : "left", "");
+  };
+  /**
+   * @return {undefined}
+   */
+  Tooltip.prototype.setContent = function() {
+    var $tip = this.tip();
+    var title = this.getTitle();
+    $tip.find(".tooltip-inner")[this.options.html ? "html" : "text"](title);
+    $tip.removeClass("fade in top bottom left right");
+  };
+  /**
+   * @param {Function} e
+   * @return {?}
+   */
+  Tooltip.prototype.hide = function(e) {
+    /**
+     * @return {undefined}
+     */
+    function complete() {
+      if ("in" != self.hoverState) {
+        $tip.detach();
+      }
+      if (self.$element) {
+        self.$element.removeAttr("aria-describedby").trigger("hidden.bs." + self.type);
+      }
+      if (e) {
+        e();
+      }
+    }
+    var self = this;
+    var $tip = $(this.$tip);
+    var startEvent = $.Event("hide.bs." + this.type);
+    if (this.$element.trigger(startEvent), !startEvent.isDefaultPrevented()) {
+      return $tip.removeClass("in"), $.support.transition && $tip.hasClass("fade") ? $tip.one("bsTransitionEnd", complete).emulateTransitionEnd(Tooltip.TRANSITION_DURATION) : complete(), this.hoverState = null, this;
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Tooltip.prototype.fixTitle = function() {
+    var $e = this.$element;
+    if ($e.attr("title") || "string" != typeof $e.attr("data-original-title")) {
+      $e.attr("data-original-title", $e.attr("title") || "").attr("title", "");
+    }
+  };
+  /**
+   * @return {?}
+   */
+  Tooltip.prototype.hasContent = function() {
+    return this.getTitle();
+  };
+  /**
+   * @param {Object} $element
+   * @return {?}
+   */
+  Tooltip.prototype.getPosition = function($element) {
+    $element = $element || this.$element;
+    var element = $element[0];
+    /** @type {boolean} */
+    var bShow = "BODY" == element.tagName;
+    var rect = element.getBoundingClientRect();
+    if (null == rect.width) {
+      rect = $.extend({}, rect, {
+        width : rect.right - rect.left,
+        height : rect.bottom - rect.top
+      });
+    }
+    var f = window.SVGElement && element instanceof window.SVGElement;
+    var platformVersions = bShow ? {
+      top : 0,
+      left : 0
+    } : f ? null : $element.offset();
+    var copy = {
+      scroll : bShow ? document.documentElement.scrollTop || document.body.scrollTop : $element.scrollTop()
+    };
+    /** @type {(null|{height: ?, width: ?})} */
+    var newOpts = bShow ? {
+      width : $(window).width(),
+      height : $(window).height()
+    } : null;
+    return $.extend({}, rect, copy, newOpts, platformVersions);
+  };
+  /**
+   * @param {string} str
+   * @param {?} pos
+   * @param {number} actualWidth
+   * @param {number} actualHeight
+   * @return {?}
+   */
+  Tooltip.prototype.getCalculatedOffset = function(str, pos, actualWidth, actualHeight) {
+    return "bottom" == str ? {
+      top : pos.top + pos.height,
+      left : pos.left + pos.width / 2 - actualWidth / 2
+    } : "top" == str ? {
+      top : pos.top - actualHeight,
+      left : pos.left + pos.width / 2 - actualWidth / 2
+    } : "left" == str ? {
+      top : pos.top + pos.height / 2 - actualHeight / 2,
+      left : pos.left - actualWidth
+    } : {
+      top : pos.top + pos.height / 2 - actualHeight / 2,
+      left : pos.left + pos.width
+    };
+  };
+  /**
+   * @param {string} placement
+   * @param {?} layout
+   * @param {?} v00
+   * @param {number} value
+   * @return {?}
+   */
+  Tooltip.prototype.getViewportAdjustedDelta = function(placement, layout, v00, value) {
+    var result = {
+      top : 0,
+      left : 0
+    };
+    if (!this.$viewport) {
+      return result;
+    }
+    var bounce = this.options.viewport && this.options.viewport.padding || 0;
+    var p = this.getPosition(this.$viewport);
+    if (/right|left/.test(placement)) {
+      /** @type {number} */
+      var y = layout.top - bounce - p.scroll;
+      var tval = layout.top + bounce - p.scroll + value;
+      if (y < p.top) {
+        /** @type {number} */
+        result.top = p.top - y;
+      } else {
+        if (tval > p.top + p.height) {
+          /** @type {number} */
+          result.top = p.top + p.height - tval;
+        }
+      }
+    } else {
+      /** @type {number} */
+      var x = layout.left - bounce;
+      var position = layout.left + bounce + v00;
+      if (x < p.left) {
+        /** @type {number} */
+        result.left = p.left - x;
+      } else {
+        if (position > p.right) {
+          /** @type {number} */
+          result.left = p.left + p.width - position;
+        }
+      }
+    }
+    return result;
+  };
+  /**
+   * @return {?}
+   */
+  Tooltip.prototype.getTitle = function() {
+    var a;
+    var $e = this.$element;
+    var o = this.options;
+    return a = $e.attr("data-original-title") || ("function" == typeof o.title ? o.title.call($e[0]) : o.title);
+  };
+  /**
+   * @param {number} id
+   * @return {?}
+   */
+  Tooltip.prototype.getUID = function(id) {
+    do {
+      id += ~~(1E6 * Math.random());
+    } while (document.getElementById(id));
+    return id;
+  };
+  /**
+   * @return {?}
+   */
+  Tooltip.prototype.tip = function() {
+    if (!this.$tip && (this.$tip = $(this.options.template), 1 != this.$tip.length)) {
+      throw new Error(this.type + " `template` option must consist of exactly 1 top-level element!");
+    }
+    return this.$tip;
+  };
+  /**
+   * @return {?}
+   */
+  Tooltip.prototype.arrow = function() {
+    return this.$arrow = this.$arrow || this.tip().find(".tooltip-arrow");
+  };
+  /**
+   * @return {undefined}
+   */
+  Tooltip.prototype.enable = function() {
+    /** @type {boolean} */
+    this.enabled = true;
+  };
+  /**
+   * @return {undefined}
+   */
+  Tooltip.prototype.disable = function() {
+    /** @type {boolean} */
+    this.enabled = false;
+  };
+  /**
+   * @return {undefined}
+   */
+  Tooltip.prototype.toggleEnabled = function() {
+    /** @type {boolean} */
+    this.enabled = !this.enabled;
+  };
+  /**
+   * @param {Event} e
+   * @return {undefined}
+   */
+  Tooltip.prototype.toggle = function(e) {
+    var self = this;
+    if (e) {
+      self = $(e.currentTarget).data("bs." + this.type);
+      if (!self) {
+        self = new this.constructor(e.currentTarget, this.getDelegateOptions());
+        $(e.currentTarget).data("bs." + this.type, self);
+      }
+    }
+    if (e) {
+      /** @type {boolean} */
+      self.inState.click = !self.inState.click;
+      if (self.isInStateTrue()) {
+        self.enter(self);
+      } else {
+        self.leave(self);
+      }
+    } else {
+      if (self.tip().hasClass("in")) {
+        self.leave(self);
+      } else {
+        self.enter(self);
+      }
+    }
+  };
+  /**
+   * @return {undefined}
+   */
+  Tooltip.prototype.destroy = function() {
+    var self = this;
+    clearTimeout(this.timeout);
+    this.hide(function() {
+      self.$element.off("." + self.type).removeData("bs." + self.type);
+      if (self.$tip) {
+        self.$tip.detach();
+      }
+      /** @type {null} */
+      self.$tip = null;
+      /** @type {null} */
+      self.$arrow = null;
+      /** @type {null} */
+      self.$viewport = null;
+      /** @type {null} */
+      self.$element = null;
+    });
+  };
+  var old = $.fn.tooltip;
+  /** @type {function (number): ?} */
+  $.fn.tooltip = initialize;
+  /** @type {function (?, boolean): undefined} */
+  $.fn.tooltip.Constructor = Tooltip;
+  /**
+   * @return {?}
+   */
+  $.fn.tooltip.noConflict = function() {
+    return $.fn.tooltip = old, this;
+  };
+}(jQuery), +function($) {
+  /**
+   * @param {number} arg
+   * @return {?}
+   */
+  function initialize(arg) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.popover");
+      var options = "object" == typeof arg && arg;
+      if (!(!data && /destroy|hide/.test(arg))) {
+        if (!data) {
+          $this.data("bs.popover", data = new Popover(this, options));
+        }
+        if ("string" == typeof arg) {
+          data[arg]();
+        }
+      }
+    });
+  }
+  /**
+   * @param {?} element
+   * @param {boolean} options
+   * @return {undefined}
+   */
+  var Popover = function(element, options) {
+    this.init("popover", element, options);
+  };
+  if (!$.fn.tooltip) {
+    throw new Error("Popover requires tooltip.js");
+  }
+  /** @type {string} */
+  Popover.VERSION = "3.3.7";
+  Popover.DEFAULTS = $.extend({}, $.fn.tooltip.Constructor.DEFAULTS, {
+    placement : "right",
+    trigger : "click",
+    content : "",
+    template : '<div class="popover" role="tooltip"><div class="arrow"></div><h3 class="popover-title"></h3><div class="popover-content"></div></div>'
+  });
+  Popover.prototype = $.extend({}, $.fn.tooltip.Constructor.prototype);
+  /** @type {function (?, boolean): undefined} */
+  Popover.prototype.constructor = Popover;
+  /**
+   * @return {?}
+   */
+  Popover.prototype.getDefaults = function() {
+    return Popover.DEFAULTS;
+  };
+  /**
+   * @return {undefined}
+   */
+  Popover.prototype.setContent = function() {
+    var $tip = this.tip();
+    var title = this.getTitle();
+    var err = this.getContent();
+    $tip.find(".popover-title")[this.options.html ? "html" : "text"](title);
+    $tip.find(".popover-content").children().detach().end()[this.options.html ? "string" == typeof err ? "html" : "append" : "text"](err);
+    $tip.removeClass("fade top bottom left right in");
+    if (!$tip.find(".popover-title").html()) {
+      $tip.find(".popover-title").hide();
+    }
+  };
+  /**
+   * @return {?}
+   */
+  Popover.prototype.hasContent = function() {
+    return this.getTitle() || this.getContent();
+  };
+  /**
+   * @return {?}
+   */
+  Popover.prototype.getContent = function() {
+    var $e = this.$element;
+    var o = this.options;
+    return $e.attr("data-content") || ("function" == typeof o.content ? o.content.call($e[0]) : o.content);
+  };
+  /**
+   * @return {?}
+   */
+  Popover.prototype.arrow = function() {
+    return this.$arrow = this.$arrow || this.tip().find(".arrow");
+  };
+  var old = $.fn.popover;
+  /** @type {function (number): ?} */
+  $.fn.popover = initialize;
+  /** @type {function (?, boolean): undefined} */
+  $.fn.popover.Constructor = Popover;
+  /**
+   * @return {?}
+   */
+  $.fn.popover.noConflict = function() {
+    return $.fn.popover = old, this;
+  };
+}(jQuery), +function($) {
+  /**
+   * @param {Object} element
+   * @param {?} options
+   * @return {undefined}
+   */
+  function ScrollSpy(element, options) {
+    this.$body = $(document.body);
+    this.$scrollElement = $($(element).is(document.body) ? window : element);
+    this.options = $.extend({}, ScrollSpy.DEFAULTS, options);
+    /** @type {string} */
+    this.selector = (this.options.target || "") + " .nav li > a";
+    /** @type {Array} */
+    this.offsets = [];
+    /** @type {Array} */
+    this.targets = [];
+    /** @type {null} */
+    this.activeTarget = null;
+    /** @type {number} */
+    this.scrollHeight = 0;
+    this.$scrollElement.on("scroll.bs.scrollspy", $.proxy(this.process, this));
+    this.refresh();
+    this.process();
+  }
+  /**
+   * @param {number} arg
+   * @return {?}
+   */
+  function init(arg) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.scrollspy");
+      var options = "object" == typeof arg && arg;
+      if (!data) {
+        $this.data("bs.scrollspy", data = new ScrollSpy(this, options));
+      }
+      if ("string" == typeof arg) {
+        data[arg]();
+      }
+    });
+  }
+  /** @type {string} */
+  ScrollSpy.VERSION = "3.3.7";
+  ScrollSpy.DEFAULTS = {
+    offset : 10
+  };
+  /**
+   * @return {?}
+   */
+  ScrollSpy.prototype.getScrollHeight = function() {
+    return this.$scrollElement[0].scrollHeight || Math.max(this.$body[0].scrollHeight, document.documentElement.scrollHeight);
+  };
+  /**
+   * @return {undefined}
+   */
+  ScrollSpy.prototype.refresh = function() {
+    var self = this;
+    /** @type {string} */
+    var i = "offset";
+    /** @type {number} */
+    var nub_height = 0;
+    /** @type {Array} */
+    this.offsets = [];
+    /** @type {Array} */
+    this.targets = [];
+    this.scrollHeight = this.getScrollHeight();
+    if (!$.isWindow(this.$scrollElement[0])) {
+      /** @type {string} */
+      i = "position";
+      nub_height = this.$scrollElement.scrollTop();
+    }
+    this.$body.find(this.selector).map(function() {
+      var $el = $(this);
+      var href = $el.data("target") || $el.attr("href");
+      var codeSegments = /^#./.test(href) && $(href);
+      return codeSegments && (codeSegments.length && (codeSegments.is(":visible") && [[codeSegments[i]().top + nub_height, href]])) || null;
+    }).sort(function(mat0, mat1) {
+      return mat0[0] - mat1[0];
+    }).each(function() {
+      self.offsets.push(this[0]);
+      self.targets.push(this[1]);
+    });
+  };
+  /**
+   * @return {?}
+   */
+  ScrollSpy.prototype.process = function() {
+    var i;
+    var scrollTop = this.$scrollElement.scrollTop() + this.options.offset;
+    var offset = this.getScrollHeight();
+    /** @type {number} */
+    var maxScroll = this.options.offset + offset - this.$scrollElement.height();
+    var offsets = this.offsets;
+    var targets = this.targets;
+    var activeTarget = this.activeTarget;
+    if (this.scrollHeight != offset && this.refresh(), scrollTop >= maxScroll) {
+      return activeTarget != (i = targets[targets.length - 1]) && this.activate(i);
+    }
+    if (activeTarget && scrollTop < offsets[0]) {
+      return this.activeTarget = null, this.clear();
+    }
+    i = offsets.length;
+    for (;i--;) {
+      if (activeTarget != targets[i]) {
+        if (scrollTop >= offsets[i]) {
+          if (void 0 === offsets[i + 1] || scrollTop < offsets[i + 1]) {
+            this.activate(targets[i]);
+          }
+        }
+      }
+    }
+  };
+  /**
+   * @param {Error} target
+   * @return {undefined}
+   */
+  ScrollSpy.prototype.activate = function(target) {
+    /** @type {Error} */
+    this.activeTarget = target;
+    this.clear();
+    /** @type {string} */
+    var selector = this.selector + '[data-target="' + target + '"],' + this.selector + '[href="' + target + '"]';
+    var active = $(selector).parents("li").addClass("active");
+    if (active.parent(".dropdown-menu").length) {
+      active = active.closest("li.dropdown").addClass("active");
+    }
+    active.trigger("activate.bs.scrollspy");
+  };
+  /**
+   * @return {undefined}
+   */
+  ScrollSpy.prototype.clear = function() {
+    $(this.selector).parentsUntil(this.options.target, ".active").removeClass("active");
+  };
+  var old = $.fn.scrollspy;
+  /** @type {function (number): ?} */
+  $.fn.scrollspy = init;
+  /** @type {function (Object, ?): undefined} */
+  $.fn.scrollspy.Constructor = ScrollSpy;
+  /**
+   * @return {?}
+   */
+  $.fn.scrollspy.noConflict = function() {
+    return $.fn.scrollspy = old, this;
+  };
+  $(window).on("load.bs.scrollspy.data-api", function() {
+    $('[data-spy="scroll"]').each(function() {
+      var self = $(this);
+      init.call(self, self.data());
+    });
+  });
+}(jQuery), +function($) {
+  /**
+   * @param {?} selector
+   * @return {?}
+   */
+  function init(selector) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.tab");
+      if (!data) {
+        $this.data("bs.tab", data = new Tab(this));
+      }
+      if ("string" == typeof selector) {
+        data[selector]();
+      }
+    });
+  }
+  /**
+   * @param {?} element
+   * @return {undefined}
+   */
+  var Tab = function(element) {
+    this.element = $(element);
+  };
+  /** @type {string} */
+  Tab.VERSION = "3.3.7";
+  /** @type {number} */
+  Tab.TRANSITION_DURATION = 150;
+  /**
+   * @return {undefined}
+   */
+  Tab.prototype.show = function() {
+    var $this = this.element;
+    var $ul = $this.closest("ul:not(.dropdown-menu)");
+    var selector = $this.data("target");
+    if (selector || (selector = $this.attr("href"), selector = selector && selector.replace(/.*(?=#[^\s]*$)/, "")), !$this.parent("li").hasClass("active")) {
+      var elements = $ul.find(".active:last a");
+      var e = $.Event("hide.bs.tab", {
+        relatedTarget : $this[0]
+      });
+      var addingEvent = $.Event("show.bs.tab", {
+        relatedTarget : elements[0]
+      });
+      if (elements.trigger(e), $this.trigger(addingEvent), !addingEvent.isDefaultPrevented() && !e.isDefaultPrevented()) {
+        var $target = $(selector);
+        this.activate($this.closest("li"), $ul);
+        this.activate($target, $target.parent(), function() {
+          elements.trigger({
+            type : "hidden.bs.tab",
+            relatedTarget : $this[0]
+          });
+          $this.trigger({
+            type : "shown.bs.tab",
+            relatedTarget : elements[0]
+          });
+        });
+      }
+    }
+  };
+  /**
+   * @param {Object} element
+   * @param {Object} container
+   * @param {Object} callback
+   * @return {undefined}
+   */
+  Tab.prototype.activate = function(element, container, callback) {
+    /**
+     * @return {undefined}
+     */
+    function next() {
+      $active.removeClass("active").find("> .dropdown-menu > .active").removeClass("active").end().find('[data-toggle="tab"]').attr("aria-expanded", false);
+      element.addClass("active").find('[data-toggle="tab"]').attr("aria-expanded", true);
+      if (showAddButton) {
+        element[0].offsetWidth;
+        element.addClass("in");
+      } else {
+        element.removeClass("fade");
+      }
+      if (element.parent(".dropdown-menu").length) {
+        element.closest("li.dropdown").addClass("active").end().find('[data-toggle="tab"]').attr("aria-expanded", true);
+      }
+      if (callback) {
+        callback();
+      }
+    }
+    var $active = container.find("> .active");
+    var showAddButton = callback && ($.support.transition && ($active.length && $active.hasClass("fade") || !!container.find("> .fade").length));
+    if ($active.length && showAddButton) {
+      $active.one("bsTransitionEnd", next).emulateTransitionEnd(Tab.TRANSITION_DURATION);
+    } else {
+      next();
+    }
+    $active.removeClass("in");
+  };
+  var old = $.fn.tab;
+  /** @type {function (?): ?} */
+  $.fn.tab = init;
+  /** @type {function (?): undefined} */
+  $.fn.tab.Constructor = Tab;
+  /**
+   * @return {?}
+   */
+  $.fn.tab.noConflict = function() {
+    return $.fn.tab = old, this;
+  };
+  /**
+   * @param {?} event
+   * @return {undefined}
+   */
+  var stop = function(event) {
+    event.preventDefault();
+    init.call($(this), "show");
+  };
+  $(document).on("click.bs.tab.data-api", '[data-toggle="tab"]', stop).on("click.bs.tab.data-api", '[data-toggle="pill"]', stop);
+}(jQuery), +function($) {
+  /**
+   * @param {number} arg
+   * @return {?}
+   */
+  function init(arg) {
+    return this.each(function() {
+      var $this = $(this);
+      var data = $this.data("bs.affix");
+      var options = "object" == typeof arg && arg;
+      if (!data) {
+        $this.data("bs.affix", data = new Affix(this, options));
+      }
+      if ("string" == typeof arg) {
+        data[arg]();
+      }
+    });
+  }
+  /**
+   * @param {?} element
+   * @param {?} options
+   * @return {undefined}
+   */
+  var Affix = function(element, options) {
+    this.options = $.extend({}, Affix.DEFAULTS, options);
+    this.$target = $(this.options.target).on("scroll.bs.affix.data-api", $.proxy(this.checkPosition, this)).on("click.bs.affix.data-api", $.proxy(this.checkPositionWithEventLoop, this));
+    this.$element = $(element);
+    /** @type {null} */
+    this.affixed = null;
+    /** @type {null} */
+    this.unpin = null;
+    /** @type {null} */
+    this.pinnedOffset = null;
+    this.checkPosition();
+  };
+  /** @type {string} */
+  Affix.VERSION = "3.3.7";
+  /** @type {string} */
+  Affix.RESET = "affix affix-top affix-bottom";
+  Affix.DEFAULTS = {
+    offset : 0,
+    target : window
+  };
+  /**
+   * @param {number} el
+   * @param {?} value
+   * @param {string} top
+   * @param {number} stateName
+   * @return {?}
+   */
+  Affix.prototype.getState = function(el, value, top, stateName) {
+    var scrollTop = this.$target.scrollTop();
+    var position = this.$element.offset();
+    var wiewHeight = this.$target.height();
+    if (null != top && "top" == this.affixed) {
+      return scrollTop < top && "top";
+    }
+    if ("bottom" == this.affixed) {
+      return null != top ? !(scrollTop + this.unpin <= position.top) && "bottom" : !(scrollTop + wiewHeight <= el - stateName) && "bottom";
+    }
+    /** @type {boolean} */
+    var iterator = null == this.affixed;
+    var initial = iterator ? scrollTop : position.top;
+    var computed = iterator ? wiewHeight : value;
+    return null != top && scrollTop <= top ? "top" : null != stateName && (initial + computed >= el - stateName && "bottom");
+  };
+  /**
+   * @return {?}
+   */
+  Affix.prototype.getPinnedOffset = function() {
+    if (this.pinnedOffset) {
+      return this.pinnedOffset;
+    }
+    this.$element.removeClass(Affix.RESET).addClass("affix");
+    var scrollTop = this.$target.scrollTop();
+    var position = this.$element.offset();
+    return this.pinnedOffset = position.top - scrollTop;
+  };
+  /**
+   * @return {undefined}
+   */
+  Affix.prototype.checkPositionWithEventLoop = function() {
+    setTimeout($.proxy(this.checkPosition, this), 1);
+  };
+  /**
+   * @return {undefined}
+   */
+  Affix.prototype.checkPosition = function() {
+    if (this.$element.is(":visible")) {
+      var udataCur = this.$element.height();
+      var offset = this.options.offset;
+      var offsetTop = offset.top;
+      var offsetBottom = offset.bottom;
+      /** @type {number} */
+      var failuresLink = Math.max($(document).height(), $(document.body).height());
+      if ("object" != typeof offset) {
+        offsetBottom = offsetTop = offset;
+      }
+      if ("function" == typeof offsetTop) {
+        offsetTop = offset.top(this.$element);
+      }
+      if ("function" == typeof offsetBottom) {
+        offsetBottom = offset.bottom(this.$element);
+      }
+      var affix = this.getState(failuresLink, udataCur, offsetTop, offsetBottom);
+      if (this.affixed != affix) {
+        if (null != this.unpin) {
+          this.$element.css("top", "");
+        }
+        /** @type {string} */
+        var affixType = "affix" + (affix ? "-" + affix : "");
+        var e = $.Event(affixType + ".bs.affix");
+        if (this.$element.trigger(e), e.isDefaultPrevented()) {
+          return;
+        }
+        this.affixed = affix;
+        this.unpin = "bottom" == affix ? this.getPinnedOffset() : null;
+        this.$element.removeClass(Affix.RESET).addClass(affixType).trigger(affixType.replace("affix", "affixed") + ".bs.affix");
+      }
+      if ("bottom" == affix) {
+        this.$element.offset({
+          top : failuresLink - udataCur - offsetBottom
+        });
+      }
+    }
+  };
+  var old = $.fn.affix;
+  /** @type {function (number): ?} */
+  $.fn.affix = init;
+  /** @type {function (?, ?): undefined} */
+  $.fn.affix.Constructor = Affix;
+  /**
+   * @return {?}
+   */
+  $.fn.affix.noConflict = function() {
+    return $.fn.affix = old, this;
+  };
+  $(window).on("load", function() {
+    $('[data-spy="affix"]').each(function() {
+      var self = $(this);
+      var options = self.data();
+      options.offset = options.offset || {};
+      if (null != options.offsetBottom) {
+        options.offset.bottom = options.offsetBottom;
+      }
+      if (null != options.offsetTop) {
+        options.offset.top = options.offsetTop;
+      }
+      init.call(self, options);
+    });
+  });
+}(jQuery);
